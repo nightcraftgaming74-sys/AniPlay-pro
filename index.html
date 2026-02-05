@@ -16,8 +16,13 @@
         * { box-sizing: border-box; transition: 0.3s; font-family: 'Outfit', sans-serif; }
         body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
 
-        header { position: fixed; top: 0; width: 100%; height: 60px; background: rgba(5,5,5,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 1000; border-bottom: 1px solid var(--border); }
-        .logo { font-size: 20px; color: var(--primary); font-weight: 900; letter-spacing: -1px; cursor: pointer; }
+        header { position: fixed; top: 0; width: 100%; height: 60px; background: rgba(5,5,5,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 1000; border-bottom: 1px solid var(--border); gap: 10px; }
+        .logo { font-size: 18px; color: var(--primary); font-weight: 900; letter-spacing: -1px; cursor: pointer; white-space: nowrap; }
+        
+        /* Search Box Style */
+        .search-container { flex-grow: 1; max-width: 400px; position: relative; }
+        .search-inp { width: 100%; padding: 8px 35px 8px 15px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 20px; color: #fff; outline: none; font-size: 14px; }
+        .search-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none; }
 
         .sidebar { position: fixed; left: -280px; top: 0; width: 260px; height: 100%; background: var(--surface); z-index: 5000; padding: 20px 0; border-right: 1px solid var(--border); transition: 0.4s; }
         .sidebar.active { left: 0; }
@@ -30,23 +35,22 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .v-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-        .v-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); cursor: pointer; overflow: hidden; position: relative; }
+        .v-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); cursor: pointer; overflow: hidden; }
         .v-thumb { width: 100%; aspect-ratio: 16/9; background: #222; display: flex; align-items: center; justify-content: center; }
-        .v-info { padding: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; color: #fff; }
+        .v-info { padding: 10px; font-weight: 600; font-size: 14px; color: #fff; }
 
         .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 6000; background: rgba(0,0,0,0.9); }
         .modal-content { background: var(--surface); width: 90%; max-width: 380px; padding: 30px; border-radius: 20px; border: 1px solid var(--border); position: relative; }
         
         .inp { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 10px; margin-bottom: 15px; outline: none; }
         .btn { width: 100%; padding: 12px; background: var(--primary); border: none; color: #fff; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn:disabled { background: #555; cursor: not-allowed; }
         
         #videoPlayer { position: fixed; inset: 0; background: #000; z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 4000; display: none; }
         .overlay.active { display: block; }
 
-        .ai-box { background: #1a1a1a; border-radius: 15px; padding: 15px; height: 300px; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--border); }
-        .ai-msg { margin-bottom: 10px; font-size: 14px; }
+        .ai-box { background: #1a1a1a; border-radius: 15px; padding: 15px; height: 350px; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--border); }
+        .ai-msg { margin-bottom: 12px; font-size: 14px; line-height: 1.4; }
         .ai-bot { color: var(--accent); }
         .ai-user { color: var(--primary); text-align: right; }
     </style>
@@ -56,8 +60,13 @@
 <header>
     <i class="fas fa-bars-staggered" onclick="toggleSidebar()" style="cursor:pointer; font-size: 20px;"></i>
     <div class="logo" onclick="location.reload()">ANIPLAY<span style="color:#fff;">AI</span></div>
-    <div onclick="checkUserAuth()" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
-        <span id="uNameDisplay" style="font-size:12px; color:var(--accent); font-weight:bold;">GUEST</span>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-inp" placeholder="Search videos..." oninput="searchVideos()">
+        <i class="fas fa-search search-icon"></i>
+    </div>
+
+    <div onclick="checkUserAuth()" style="cursor:pointer; display:flex; align-items:center; gap:5px;">
         <i class="fas fa-user-circle" style="font-size: 24px;"></i>
     </div>
 </header>
@@ -75,7 +84,7 @@
 
 <main>
     <div id="home" class="screen active">
-        <h4 style="color: #888;">TRENDING NOW</h4>
+        <h4 id="homeTitle" style="color: #888;">TRENDING NOW</h4>
         <div class="v-grid" id="videoGrid"></div>
     </div>
 
@@ -93,10 +102,10 @@
     <div id="aiScreen" class="screen">
         <h2>AniPlay AI Assistant</h2>
         <div class="ai-box" id="aiBox">
-            <div class="ai-msg ai-bot"><b>AI:</b> Hello! I am AniPlay AI. How can I help you today?</div>
+            <div class="ai-msg ai-bot"><b>AI:</b> Hello! I am AniPlay AI. Tell me what anime you want to watch or ask me a question!</div>
         </div>
         <div style="display:flex; gap:10px;">
-            <input type="text" id="aiInput" class="inp" placeholder="Ask me anything..." style="margin:0;">
+            <input type="text" id="aiInput" class="inp" placeholder="Type here..." style="margin:0;">
             <button class="btn" style="width:80px;" onclick="askAI()">Send</button>
         </div>
     </div>
@@ -151,6 +160,8 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth(), db = firebase.database(), storage = firebase.storage();
 
+    let allVideos = [];
+
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -170,134 +181,90 @@
         document.getElementById('signupBox').style.display = type === 'signup' ? 'block' : 'none';
     }
 
-    function checkUserAuth() { if(!auth.currentUser) openModal('authMod'); else showScreen('channel'); }
-    
-    function loginUser() {
-        const e = document.getElementById('lEmail').value, p = document.getElementById('lPass').value;
-        auth.signInWithEmailAndPassword(e, p).then(() => location.reload()).catch(err => alert(err.message));
-    }
-    
-    function registerUser() {
-        const n = document.getElementById('sName').value, e = document.getElementById('sEmail').value, p = document.getElementById('sPass').value;
-        auth.createUserWithEmailAndPassword(e, p).then(res => res.user.updateProfile({displayName: n}).then(() => location.reload())).catch(err => alert(err.message));
+    // --- Search Logic ---
+    function searchVideos() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allVideos.filter(v => v.title.toLowerCase().includes(query));
+        renderVideos(filtered);
+        document.getElementById('homeTitle').innerText = query ? `Search Results for "${query}"` : "TRENDING NOW";
+        showScreen('home');
     }
 
-    function forgotPassword() {
-        const email = document.getElementById('lEmail').value;
-        if(!email) return alert("Enter email first!");
-        auth.sendPasswordResetEmail(email).then(() => alert("Reset link sent!")).catch(err => alert(err.message));
-    }
-    
-    function logout() { auth.signOut().then(() => location.reload()); }
-
-    function handleUpload() {
-        const file = document.getElementById('vFile').files[0], title = document.getElementById('vTitle').value;
-        const btn = document.getElementById('upBtn');
-        if(!auth.currentUser || !file || !title) return alert("Fill all fields!");
-        btn.disabled = true; btn.innerText = "Processing...";
-        const ref = storage.ref('vids/' + Date.now() + "_" + file.name);
-        const uploadTask = ref.put(file);
-        uploadTask.on('state_changed', (s) => {
-            document.getElementById('upStatus').innerText = "Uploading: " + Math.round((s.bytesTransferred/s.totalBytes)*100) + "%";
-        }, (err) => { alert(err.message); btn.disabled = false; }, () => {
-            uploadTask.snapshot.ref.getDownloadURL().then(url => {
-                db.ref('videos').push({title, url, userId: auth.currentUser.uid, author: auth.currentUser.displayName, timestamp: Date.now()});
-                location.reload();
-            });
+    function renderVideos(list) {
+        const grid = document.getElementById('videoGrid');
+        grid.innerHTML = '';
+        list.forEach(v => {
+            grid.innerHTML += `<div class="v-card" onclick="playVid('${v.url}')">
+                <div class="v-thumb"><i class="fas fa-play"></i></div>
+                <div class="v-info">${v.title}</div>
+            </div>`;
         });
     }
 
-    // --- Playlist Fix ---
+    // --- AI Logic (Updated) ---
+    function askAI() {
+        const input = document.getElementById('aiInput');
+        const box = document.getElementById('aiBox');
+        const msg = input.value.trim().toLowerCase();
+        if(!msg) return;
+
+        box.innerHTML += `<div class="ai-msg ai-user"><b>You:</b> ${input.value}</div>`;
+        
+        let response = "I'm still learning! You can ask me to 'search for anime', 'how to upload', or just say 'hello'.";
+        
+        if(msg.includes("hello") || msg.includes("hi")) response = "Hello! Ready for some Anime action?";
+        else if(msg.includes("upload")) response = "To upload, click on the Sidebar menu and select 'Upload Video'.";
+        else if(msg.includes("search")) response = "Use the search bar at the top to find any video!";
+        else if(msg.includes("playlist")) response = "Go to Playlists and click '+ Create' to organize your favorites!";
+
+        setTimeout(() => {
+            box.innerHTML += `<div class="ai-msg ai-bot"><b>AI:</b> ${response}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }, 800);
+        input.value = "";
+    }
+
+    // --- Firebase Functions ---
+    function loadData() {
+        db.ref('videos').on('value', snap => {
+            allVideos = [];
+            snap.forEach(child => { allVideos.push(child.val()); });
+            renderVideos(allVideos);
+        });
+    }
+
     function createPlaylist() {
         if(!auth.currentUser) return openModal('authMod');
         const name = prompt("Enter Playlist Name:");
         if(name) {
-            db.ref('playlists/' + auth.currentUser.uid).push({ name: name });
+            db.ref('playlists/' + auth.currentUser.uid).push({ name: name }).then(() => alert("Playlist Created!"));
         }
     }
 
-    function loadPlaylists() {
-        if(!auth.currentUser) return;
-        db.ref('playlists/' + auth.currentUser.uid).on('value', snap => {
-            const grid = document.getElementById('playlistGrid');
-            grid.innerHTML = '';
-            snap.forEach(child => {
-                grid.innerHTML += `
-                <div class="v-card" style="padding:20px; text-align:center; background:#1a1a1a;">
-                    <i class="fas fa-folder" style="font-size:40px; color:var(--accent); margin-bottom:10px;"></i><br>
-                    <b>${child.val().name}</b>
-                </div>`;
-            });
-        });
+    // Auth & Other functions (Keep your working ones)
+    function loginUser() {
+        const e = document.getElementById('lEmail').value, p = document.getElementById('lPass').value;
+        auth.signInWithEmailAndPassword(e, p).then(() => location.reload()).catch(err => alert(err.message));
     }
-
-    function addToPlaylist(vTitle, vUrl) {
-        if(!auth.currentUser) return openModal('authMod');
-        alert("Video: " + vTitle + " added to your favorites!");
-        // এখানে আপনি চাইলে স্পেসিফিক প্লেলিস্ট সিলেক্টর অ্যাড করতে পারেন
+    function registerUser() {
+        const n = document.getElementById('sName').value, e = document.getElementById('sEmail').value, p = document.getElementById('sPass').value;
+        auth.createUserWithEmailAndPassword(e, p).then(res => res.user.updateProfile({displayName: n}).then(() => location.reload())).catch(err => alert(err.message));
     }
-
-    function loadData() {
-        db.ref('videos').on('value', snap => {
-            const grid = document.getElementById('videoGrid');
-            grid.innerHTML = '';
-            snap.forEach(child => {
-                const v = child.val();
-                grid.innerHTML += `
-                <div class="v-card">
-                    <div class="v-thumb" onclick="playVid('${v.url}')"><i class="fas fa-play"></i></div>
-                    <div class="v-info">
-                        <span>${v.title}</span>
-                        <i class="fas fa-plus-circle" style="color:var(--accent);" onclick="addToPlaylist('${v.title}', '${v.url}')"></i>
-                    </div>
-                </div>`;
-            });
-        });
-    }
-
-    function loadMyVideos(uid) {
-        db.ref('videos').orderByChild('userId').equalTo(uid).on('value', snap => {
-            const grid = document.getElementById('myVideos');
-            grid.innerHTML = '';
-            snap.forEach(child => {
-                const v = child.val();
-                grid.innerHTML += `
-                <div class="v-card">
-                    <div class="v-thumb" onclick="playVid('${v.url}')"><i class="fas fa-play"></i></div>
-                    <div class="v-info">${v.title}</div>
-                </div>`;
-            });
-        });
-    }
-
-    function playVid(url) {
-        document.getElementById('videoPlayer').style.display = 'flex';
-        const v = document.getElementById('mainVid');
-        v.src = url; v.play();
-    }
-    
-    function closePlayer() { 
-        document.getElementById('mainVid').pause(); 
-        document.getElementById('videoPlayer').style.display = 'none'; 
-    }
-
-    function askAI() {
-        const input = document.getElementById('aiInput'), box = document.getElementById('aiBox');
-        if(!input.value) return;
-        box.innerHTML += `<div class="ai-msg ai-user"><b>You:</b> ${input.value}</div>`;
-        setTimeout(() => {
-            box.innerHTML += `<div class="ai-msg ai-bot"><b>AI:</b> I'm AniPlay AI. Ask me anything!</div>`;
-            box.scrollTop = box.scrollHeight;
-        }, 1000);
-        input.value = "";
-    }
+    function logout() { auth.signOut().then(() => location.reload()); }
+    function checkUserAuth() { if(!auth.currentUser) openModal('authMod'); else showScreen('channel'); }
+    function playVid(url) { document.getElementById('videoPlayer').style.display = 'flex'; const v = document.getElementById('mainVid'); v.src = url; v.play(); }
+    function closePlayer() { document.getElementById('mainVid').pause(); document.getElementById('videoPlayer').style.display = 'none'; }
 
     auth.onAuthStateChanged(user => {
         if(user) {
-            document.getElementById('uNameDisplay').innerText = user.displayName.toUpperCase();
             document.getElementById('channelNameDisplay').innerText = user.displayName + "'s Channel";
-            loadMyVideos(user.uid);
-            loadPlaylists(); // প্লেলিস্ট লোড হবে লগইন থাকলে
+            db.ref('playlists/' + user.uid).on('value', snap => {
+                const grid = document.getElementById('playlistGrid');
+                grid.innerHTML = '';
+                snap.forEach(child => {
+                    grid.innerHTML += `<div class="v-card" style="padding:20px; background:#1a1a1a;">📂 ${child.val().name}</div>`;
+                });
+            });
         }
     });
 
